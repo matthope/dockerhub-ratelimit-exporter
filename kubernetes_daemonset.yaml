@@ -1,0 +1,59 @@
+apiVersion: extensions/v1beta1
+kind: DaemonSet
+metadata:
+  creationTimestamp: "2020-04-27T04:31:39Z"
+  generation: 3
+  labels:
+    app: dockerhub-ratelimit-exporter
+  name: dockerhub-ratelimit-exporter
+spec:
+  selector:
+    matchLabels:
+      app: dockerhub-ratelimit-exporter
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: dockerhub-ratelimit-exporter
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
+    spec:
+      containers:
+      - image: matthopeffx/dockerhub-ratelimit-exporter:0.0.202011091710
+        imagePullPolicy: IfNotPresent
+        env:
+          - name: NODENAME
+            valueFrom:
+              fieldRef:
+                fieldPath: spec.nodeName
+        livenessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /metrics
+            port: 8080
+            scheme: HTTP
+          initialDelaySeconds: 30
+          periodSeconds: 30
+          successThreshold: 1
+          timeoutSeconds: 10
+        name: dockerhub-ratelimit-exporter
+        ports:
+        - containerPort: 8080
+          hostPort: 8080
+          name: metrics
+          protocol: TCP
+        resources:
+          limits:
+            cpu: 300m
+            memory: 48Mi
+          requests:
+            cpu: 5m
+            memory: 16Mi
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65534
+  updateStrategy:
+    rollingUpdate:
+      maxUnavailable: 100%
+    type: RollingUpdate
