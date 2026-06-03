@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -13,7 +14,6 @@ import (
 
 	"github.com/gorilla/handlers"
 	cache "github.com/patrickmn/go-cache"
-	"github.com/pkg/errors"
 )
 
 const CacheTime = time.Minute * 5
@@ -30,8 +30,8 @@ type metricsHandler struct {
 }
 
 type Cache interface {
-	Set(string, interface{}, time.Duration)
-	Get(string) (interface{}, bool)
+	Set(string, any, time.Duration)
+	Get(string) (any, bool)
 }
 
 func main() {
@@ -62,14 +62,14 @@ func getDockerRateLimit(ctx context.Context, token *Token) ([]byte, error) {
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodHead, "https://registry-1.docker.io/v2/ratelimitpreview/test/manifests/latest", nil)
 	if err != nil {
-		return nil, errors.Wrap(err, "error building request")
+		return nil, fmt.Errorf("error building request: %w", err)
 	}
 
 	req.Header.Add("Authorization", "Bearer "+token.Token)
 
 	r, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return nil, errors.Wrap(err, "http error")
+		return nil, fmt.Errorf("http error: %w", err)
 	}
 
 	defer r.Body.Close()
@@ -84,7 +84,7 @@ func getDockerRateLimit(ctx context.Context, token *Token) ([]byte, error) {
 	if node, foundEnv := os.LookupEnv("NODENAME"); foundEnv {
 		labels = append(labels, fmt.Sprintf(`nodename="%s"`, node))
 	}
-	labelsS := strings.Join(labels,",")
+	labelsS := strings.Join(labels, ",")
 
 	out := ""
 	out += fmt.Sprintf("dockerhub_remaining{%s} %d\n", labelsS, remainingI)
@@ -94,15 +94,15 @@ func getDockerRateLimit(ctx context.Context, token *Token) ([]byte, error) {
 	return []byte(out), nil
 }
 
-func jsonGet(ctx context.Context, u string, target interface{}) error {
+func jsonGet(ctx context.Context, u string, target any) error {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u, nil)
 	if err != nil {
-		return errors.Wrap(err, "error building request")
+		return fmt.Errorf("error building request: %w", err)
 	}
 
 	r, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return errors.Wrap(err, "http error")
+		return fmt.Errorf("http error: %w", err)
 	}
 	defer r.Body.Close()
 
@@ -128,7 +128,7 @@ func getDockerRateLimitCached(ctx context.Context, c Cache) ([]byte, error) {
 
 	token, err := getDockerToken(ctx)
 	if err != nil {
-		return nil, errors.Wrap(err, "error building request")
+		return nil, fmt.Errorf("error building request: %w", err)
 	}
 
 	data, err := getDockerRateLimit(ctx, token)

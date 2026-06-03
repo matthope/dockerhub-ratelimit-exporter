@@ -1,8 +1,8 @@
-FROM golang:1.15-buster AS builder
+FROM golang:1.26-trixie AS builder
 
 WORKDIR $GOPATH/src/github.com/matthope/dockerhub-ratelimit-exporter
 
-COPY go.mod go.sum main.go .
+COPY go.mod go.sum main.go ./
 
 RUN go mod download -x
 
