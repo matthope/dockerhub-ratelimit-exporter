@@ -1,0 +1,32 @@
+name: Auto Semantic Version
+
+on:
+  push:
+    branches:
+      - master
+
+permissions:
+  contents: write
+
+jobs:
+  tag:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Bump version and push tag
+        id: tag_version
+        uses: mathieudutour/github-tag-action@v6.2
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          release_branches: master
+          tag_prefix: v
+          default_bump: patch
+
+      - name: Show created tag
+        run: |
+          echo "New tag: ${{ steps.tag_version.outputs.new_tag }}"
+          echo "New version: ${{ steps.tag_version.outputs.new_version }}"
