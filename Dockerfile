@@ -6,12 +6,15 @@ COPY go.mod go.sum main.go .
 
 RUN go mod download -x
 
-RUN go build -ldflags "-linkmode external -extldflags -static -s -w" ./
+ARG TARGETOS
+ARG TARGETARCH
+
+RUN CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} go build -ldflags "-s -w" -o /out/dockerhub-ratelimit-exporter ./
 
 FROM scratch
 
 COPY --from=builder /etc/ssl/certs/ /etc/ssl/certs/
-COPY --from=builder /go/src/github.com/matthope/dockerhub-ratelimit-exporter/dockerhub-ratelimit-exporter /bin/dockerhub-ratelimit-exporter
+COPY --from=builder /out/dockerhub-ratelimit-exporter /bin/dockerhub-ratelimit-exporter
 
 
 ENTRYPOINT ["/bin/dockerhub-ratelimit-exporter"]
